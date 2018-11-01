@@ -5,8 +5,8 @@ import numpy as np
 input_dir = 'input'
 output_dir_name = 'output'
 img_name = "lena.png"
-threshold = 70
-
+upper_threshold = 70
+down_threshold = 30
 
 def threshold_with_hysterysis(img, grad_direction, grad_magnitude):
     is_changed = False
@@ -27,7 +27,7 @@ def threshold_with_hysterysis(img, grad_direction, grad_magnitude):
                             img[first_neighb_y][first_neighb_x] = 255
                             is_changed = True
 
-                    if grad_magnitude[first_neighb_y][first_neighb_x] > threshold:
+                    if grad_magnitude[first_neighb_y][first_neighb_x] > upper_threshold:
                         if img[first_neighb_y][first_neighb_x] != 255:
                             img[first_neighb_y][first_neighb_x] = 255
                             is_changed = True
@@ -47,7 +47,7 @@ def threshold_with_hysterysis(img, grad_direction, grad_magnitude):
                             img[second_neighb_y][second_neighb_x] = 255
                             is_changed = True
 
-                    if grad_magnitude[second_neighb_y][second_neighb_x] > threshold:
+                    if grad_magnitude[second_neighb_y][second_neighb_x] > upper_threshold:
                         if img[second_neighb_y][second_neighb_x] != 255:
                             img[second_neighb_y][second_neighb_x] = 255
                             is_changed = True
@@ -161,7 +161,7 @@ def non_maximum_suppression(img, grad_magnitude, grad_direction):
             if current_grad_magnitute > first_neighb_magnitude and current_grad_magnitute > second_neighb_magnitude:
                 # print('current_magnitute = {}'.format(current_magnitute))
 
-                if current_grad_magnitute > threshold:
+                if current_grad_magnitute > upper_threshold:
                     img[y][x] = 255
             #         img[first_neighb_y][first_neighb_x] = 0
             #         img[second_neighb_y][second_neighb_x] = 0
