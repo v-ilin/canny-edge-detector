@@ -5,8 +5,26 @@ import numpy as np
 input_dir = 'input'
 output_dir_name = 'output'
 img_name = "lena.png"
-upper_threshold = 70
-down_threshold = 30
+upper_threshold = 65
+lower_threshold = 25
+jpeg_img_quality = [int(cv2.IMWRITE_JPEG_QUALITY), 100]
+
+
+def check_hysterysis_conditions(img, current_grad_direction, grad_direction, grad_magnitude, first_neighb_y, first_neighb_x):
+    if is_same_grad_directions(current_grad_direction, grad_direction[first_neighb_y][first_neighb_x]) \
+    and grad_magnitude[first_neighb_y][first_neighb_x] > lower_threshold:
+
+        first_neighb_magnitude = grad_magnitude[first_neighb_y][first_neighb_x]
+        first_neighb_neighb_y, first_neighb_neighb_x, second_neighb_neighb_y, second_neighb_neighb_x = get_neighbours_pixel_coord_edge_opposite(
+            grad_direction[first_neighb_y][first_neighb_x], first_neighb_x, first_neighb_y)
+
+        if first_neighb_magnitude > grad_magnitude[first_neighb_neighb_y][first_neighb_neighb_x] \
+        and first_neighb_magnitude > grad_magnitude[second_neighb_neighb_y][second_neighb_neighb_x]:
+            if img[first_neighb_y][first_neighb_x] != 255:
+                return True
+
+    return False
+
 
 def threshold_with_hysterysis(img, grad_direction, grad_magnitude):
     is_changed = False
@@ -21,45 +39,18 @@ def threshold_with_hysterysis(img, grad_direction, grad_magnitude):
                 is_first_neighb_exists = first_neighb_y < grad_direction.shape[0] and first_neighb_x < grad_direction.shape[1]
                 is_second_neighb_exists = second_neighb_y < grad_direction.shape[0] and second_neighb_x < grad_direction.shape[1]
 
+                if not is_first_neighb_exists and not is_second_neighb_exists:
+                    continue
+
                 if is_first_neighb_exists:
-                    if is_same_grad_directions(current_grad_direction, grad_direction[first_neighb_y][first_neighb_x]):
-                        if img[first_neighb_y][first_neighb_x] != 255:
-                            img[first_neighb_y][first_neighb_x] = 255
-                            is_changed = True
-
-                    if grad_magnitude[first_neighb_y][first_neighb_x] > upper_threshold:
-                        if img[first_neighb_y][first_neighb_x] != 255:
-                            img[first_neighb_y][first_neighb_x] = 255
-                            is_changed = True
-
-                    first_neighb_magnitude = grad_magnitude[first_neighb_y][first_neighb_x]
-                    first_neighb_neighb_y, first_neighb_neighb_x, second_neighb_neighb_y, second_neighb_neighb_x = get_neighbours_pixel_coord_edge_opposite(
-                        grad_direction[first_neighb_y][first_neighb_x], first_neighb_x, first_neighb_y)
-
-                    if first_neighb_magnitude > grad_magnitude[first_neighb_neighb_y][first_neighb_neighb_x] and first_neighb_magnitude > grad_magnitude[second_neighb_neighb_y][second_neighb_neighb_x]:
-                        if img[first_neighb_y][first_neighb_x] != 255:
-                            img[first_neighb_y][first_neighb_x] = 255
-                            is_changed = True
+                    if check_hysterysis_conditions(img, current_grad_direction, grad_direction, grad_magnitude, first_neighb_y, first_neighb_x):
+                        img[first_neighb_y][first_neighb_x] = 255
+                        is_changed = True
 
                 if is_second_neighb_exists:
-                    if is_same_grad_directions(current_grad_direction, grad_direction[second_neighb_y][second_neighb_x]):
-                        if img[second_neighb_y][second_neighb_x] != 255:
-                            img[second_neighb_y][second_neighb_x] = 255
-                            is_changed = True
-
-                    if grad_magnitude[second_neighb_y][second_neighb_x] > upper_threshold:
-                        if img[second_neighb_y][second_neighb_x] != 255:
-                            img[second_neighb_y][second_neighb_x] = 255
-                            is_changed = True
-
-                    second_neighb_magnitude = grad_magnitude[second_neighb_y][second_neighb_x]
-                    first_neighb_neighb_y, first_neighb_neighb_x, second_neighb_neighb_y, second_neighb_neighb_x = get_neighbours_pixel_coord_edge_opposite(
-                        grad_direction[second_neighb_y][second_neighb_x], second_neighb_x, second_neighb_y)
-
-                    if second_neighb_magnitude > grad_magnitude[first_neighb_neighb_y][first_neighb_neighb_x] and second_neighb_magnitude > grad_magnitude[second_neighb_neighb_y][second_neighb_neighb_x]:
-                        if img[second_neighb_y][second_neighb_x] != 255:
-                            img[second_neighb_y][second_neighb_x] = 255
-                            is_changed = True
+                    if check_hysterysis_conditions(img, current_grad_direction, grad_direction, grad_magnitude, second_neighb_y, second_neighb_x):
+                        img[second_neighb_y][second_neighb_x] = 255
+                        is_changed = True
 
     return img, is_changed
 
@@ -143,7 +134,7 @@ def is_same_grad_directions(direction1, direction2):
 def non_maximum_suppression(img, grad_magnitude, grad_direction):
     for y in range(0, img.shape[0], 1):
         for x in range(0, img.shape[1], 1):
-            current_grad_magnitute = grad_magnitude[y][x]
+            current_grad_magnitude = grad_magnitude[y][x]
             current_grad_direction = grad_direction[y][x]
 
             first_neighb_y, first_neighb_x, second_neighb_y, second_neighb_x = get_neighbours_pixel_coord_edge_opposite(current_grad_direction, x, y)
@@ -158,55 +149,48 @@ def non_maximum_suppression(img, grad_magnitude, grad_direction):
             else:
                 second_neighb_magnitude = grad_magnitude[second_neighb_y][second_neighb_x]
 
-            if current_grad_magnitute > first_neighb_magnitude and current_grad_magnitute > second_neighb_magnitude:
-                # print('current_magnitute = {}'.format(current_magnitute))
-
-                if current_grad_magnitute > upper_threshold:
+            if current_grad_magnitude > first_neighb_magnitude\
+            and current_grad_magnitude > second_neighb_magnitude\
+            and current_grad_magnitude > upper_threshold:
                     img[y][x] = 255
-            #         img[first_neighb_y][first_neighb_x] = 0
-            #         img[second_neighb_y][second_neighb_x] = 0
-            #         grad_magnitude[first_neighb_y][first_neighb_x] = 0
-            #         grad_magnitude[second_neighb_y][second_neighb_x] = 0
-            # else:
-            #     img[y][x] = 0
-            #     grad_magnitude[y][x] = 0
 
-    return img, grad_magnitude
+    img[img < 255] = 0
+    return img
 
 
 input_img_path = os.path.join(input_dir, img_name)
 output_dir_path = os.path.join(output_dir_name, img_name)
 
+if not os.path.exists(output_dir_path):
+    os.makedirs(output_dir_path)
+
 img = cv2.imread(input_img_path, cv2.IMREAD_GRAYSCALE)
 print('img.shape = {}'.format(img.shape))
 
 blurred_img = cv2.GaussianBlur(img, (5, 5), 1.4)
-cv2.imwrite(os.path.join(output_dir_path, 'gaussian_blur.png'), blurred_img)
+cv2.imwrite(os.path.join(output_dir_path, 'gaussian_blur.png'), blurred_img, jpeg_img_quality)
 
 sobel_x = cv2.Sobel(blurred_img, cv2.CV_64F, 1, 0, ksize=3)
 sobel_y = cv2.Sobel(blurred_img, cv2.CV_64F, 0, 1, ksize=3)
 
-cv2.imwrite(os.path.join(output_dir_path, 'sobel_x.png'), sobel_x)
-cv2.imwrite(os.path.join(output_dir_path, 'sobel_y.png'), sobel_y)
+cv2.imwrite(os.path.join(output_dir_path, 'sobel_x.png'), sobel_x, jpeg_img_quality)
+cv2.imwrite(os.path.join(output_dir_path, 'sobel_y.png'), sobel_y, jpeg_img_quality)
 
 grad_magnitude = np.sqrt(np.add(np.power(sobel_x, 2), np.power(sobel_y, 2)))
-cv2.imwrite(os.path.join(output_dir_path, 'grad_magnitude.png'), grad_magnitude)
+cv2.imwrite(os.path.join(output_dir_path, 'grad_magnitude.png'), grad_magnitude, jpeg_img_quality)
 grad_magnitude_img = cv2.imread(os.path.join(output_dir_path, 'grad_magnitude.png'), cv2.IMREAD_GRAYSCALE)
 print('grad_magnitude_img max = {}'.format(np.amax(grad_magnitude_img)))
 
-grad_direction = np.arctan2(sobel_y, sobel_x)
-grad_direction = grad_direction * 180 / np.pi
+grad_direction = np.arctan2(sobel_y, sobel_x) * 180 / np.pi
 
 print('grad_magnitude.shape = {}'.format(grad_magnitude.shape))
 print('sobel_x max = {}'.format(np.amax(sobel_x)))
 print('grad_magnitude max = {}'.format(np.amax(grad_magnitude)))
 print('grad_magnitude min = {}'.format(np.amin(grad_magnitude)))
-# print('grad_direction = {}'.format(grad_direction))
 
-non_maximum_suppressed_img, grad_magnitude = non_maximum_suppression(grad_magnitude_img, grad_magnitude, grad_direction)
-non_maximum_suppressed_img[non_maximum_suppressed_img < 255] = 0
+non_maximum_suppressed_img = non_maximum_suppression(grad_magnitude_img, grad_magnitude, grad_direction)
 
-cv2.imwrite(os.path.join(output_dir_path, 'non_maximum_suppressed_img.png'), non_maximum_suppressed_img)
+cv2.imwrite(os.path.join(output_dir_path, 'non_maximum_suppressed_img.png'), non_maximum_suppressed_img, jpeg_img_quality)
 
 thresholded_with_hysterysis_img, is_changed = threshold_with_hysterysis(non_maximum_suppressed_img, grad_direction, grad_magnitude)
 
@@ -218,13 +202,12 @@ while is_changed:
 
     if i % 10 == 0:
         cv2.imwrite(os.path.join(output_dir_path, 'thresholded_with_hysterysis_img_{}.png'.format(i)),
-                    thresholded_with_hysterysis_img)
+                    thresholded_with_hysterysis_img, jpeg_img_quality)
 
     i = i + 1
     print('Thresholded with Hysterysis: {}'.format(i))
 
-if not os.path.exists(output_dir_path):
-    os.makedirs(output_dir_path)
-
-cv2.imwrite(os.path.join(output_dir_path, 'thresholded_with_hysterysis_img_final.png'.format(i)),
-                    thresholded_with_hysterysis_img)
+cv2.imwrite(os.path.join(output_dir_path,
+            'thresholded_with_hysterysis_img_{}.png'.format(i)),
+            thresholded_with_hysterysis_img,
+            jpeg_img_quality)
