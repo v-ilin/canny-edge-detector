@@ -4,7 +4,7 @@ import numpy as np
 
 INPUT_DIR = 'input'
 OUTPUT_DIR_NAME = 'output'
-IMG_NAME = "lena.png"
+IMG_NAME = "capitol.png"
 UPPER_THRESHOLD = 65
 LOWER_THRESHOLD = 25
 JPEG_IMG_QUALITY = [int(cv2.IMWRITE_JPEG_QUALITY), 100]
