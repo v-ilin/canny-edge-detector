@@ -4,8 +4,9 @@ import numpy as np
 
 INPUT_DIR = 'input'
 OUTPUT_DIR_NAME = 'output'
+IMG_NAME = 'lena.png'
 # IMG_NAME = 'capitol.png'
-IMG_NAME = 'street_sign.jpg'
+# IMG_NAME = 'street_sign.jpg'
 UPPER_THRESHOLD = 65
 LOWER_THRESHOLD = 25
 JPEG_IMG_QUALITY = [int(cv2.IMWRITE_JPEG_QUALITY), 100]
@@ -154,8 +155,9 @@ def non_maximum_suppression(img, grad_magnitude, grad_direction):
             and current_grad_magnitude > second_neighb_magnitude\
             and current_grad_magnitude > UPPER_THRESHOLD:
                     img[y][x] = 255
+            else:
+                img[y][x] = 0
 
-    img[img < 255] = 0
     return img
 
 
@@ -168,18 +170,21 @@ if not os.path.exists(output_dir_path):
 img = cv2.imread(input_img_path, cv2.IMREAD_GRAYSCALE)
 print('img.shape = {}'.format(img.shape))
 
+opencv_canny = cv2.Canny(img, 100, 200)
+cv2.imwrite(os.path.join(output_dir_path, 'opencv_canny.jpg'), opencv_canny, JPEG_IMG_QUALITY)
+
 blurred_img = cv2.GaussianBlur(img, (5, 5), 1.4)
-cv2.imwrite(os.path.join(output_dir_path, 'gaussian_blur.png'), blurred_img, JPEG_IMG_QUALITY)
+cv2.imwrite(os.path.join(output_dir_path, 'gaussian_blur.jpg'), blurred_img, JPEG_IMG_QUALITY)
 
 sobel_x = cv2.Sobel(blurred_img, cv2.CV_64F, 1, 0, ksize=3)
 sobel_y = cv2.Sobel(blurred_img, cv2.CV_64F, 0, 1, ksize=3)
 
-cv2.imwrite(os.path.join(output_dir_path, 'sobel_x.png'), sobel_x, JPEG_IMG_QUALITY)
-cv2.imwrite(os.path.join(output_dir_path, 'sobel_y.png'), sobel_y, JPEG_IMG_QUALITY)
+cv2.imwrite(os.path.join(output_dir_path, 'sobel_x.jpg'), sobel_x, JPEG_IMG_QUALITY)
+cv2.imwrite(os.path.join(output_dir_path, 'sobel_y.jpg'), sobel_y, JPEG_IMG_QUALITY)
 
 grad_magnitude = np.sqrt(np.add(np.power(sobel_x, 2), np.power(sobel_y, 2)))
-cv2.imwrite(os.path.join(output_dir_path, 'grad_magnitude.png'), grad_magnitude, JPEG_IMG_QUALITY)
-grad_magnitude_img = cv2.imread(os.path.join(output_dir_path, 'grad_magnitude.png'), cv2.IMREAD_GRAYSCALE)
+cv2.imwrite(os.path.join(output_dir_path, 'grad_magnitude.jpg'), grad_magnitude, JPEG_IMG_QUALITY)
+grad_magnitude_img = cv2.imread(os.path.join(output_dir_path, 'grad_magnitude.jpg'), cv2.IMREAD_GRAYSCALE)
 print('grad_magnitude_img max = {}'.format(np.amax(grad_magnitude_img)))
 
 grad_direction = np.arctan2(sobel_y, sobel_x) * 180 / np.pi
@@ -191,7 +196,7 @@ print('grad_magnitude min = {}'.format(np.amin(grad_magnitude)))
 
 non_maximum_suppressed_img = non_maximum_suppression(grad_magnitude_img, grad_magnitude, grad_direction)
 
-cv2.imwrite(os.path.join(output_dir_path, 'non_maximum_suppressed_img.png'), non_maximum_suppressed_img, JPEG_IMG_QUALITY)
+cv2.imwrite(os.path.join(output_dir_path, 'non_maximum_suppressed_img.jpg'), non_maximum_suppressed_img, JPEG_IMG_QUALITY)
 
 thresholded_with_hysterysis_img, is_changed = threshold_with_hysterysis(non_maximum_suppressed_img, grad_direction, grad_magnitude)
 
@@ -202,13 +207,13 @@ while is_changed:
                                                                             grad_magnitude)
 
     if i % 10 == 0:
-        cv2.imwrite(os.path.join(output_dir_path, 'thresholded_with_hysterysis_img_{}.png'.format(i)),
+        cv2.imwrite(os.path.join(output_dir_path, 'thresholded_with_hysterysis_img_{}.jpg'.format(i)),
                     thresholded_with_hysterysis_img, JPEG_IMG_QUALITY)
 
     i = i + 1
     print('Thresholded with Hysterysis: {}'.format(i))
 
 cv2.imwrite(os.path.join(output_dir_path,
-            'thresholded_with_hysterysis_img_{}.png'.format(i)),
+            'thresholded_with_hysterysis_img_{}.jpg'.format(i)),
             thresholded_with_hysterysis_img,
             JPEG_IMG_QUALITY)
