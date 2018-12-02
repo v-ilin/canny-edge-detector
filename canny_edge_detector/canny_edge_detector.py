@@ -6,7 +6,9 @@ INPUT_DIR = 'input'
 OUTPUT_DIR_NAME = 'output'
 # IMG_NAME = 'lena.png'
 # IMG_NAME = 'capitol.png'
-IMG_NAME = 'street_sign.jpg'
+# IMG_NAME = 'street_sign.jpg'
+# IMG_NAME = 'opencv.jpg'
+IMG_NAME = 'kitchen.jpg'
 UPPER_THRESHOLD = 65
 LOWER_THRESHOLD = 25
 JPEG_IMG_QUALITY = [int(cv2.IMWRITE_JPEG_QUALITY), 100]
@@ -31,8 +33,8 @@ def check_hysterysis_conditions(img, current_grad_direction, grad_direction, gra
 def threshold_with_hysterysis(img, grad_direction, grad_magnitude):
     is_changed = False
 
-    for y in range(0, img.shape[0], 1):
-        for x in range(0, img.shape[1], 1):
+    for y in range(img.shape[0]):
+        for x in range(img.shape[1]):
             if img[y][x] == 255:
                 current_grad_direction = grad_direction[y][x]
                 first_neighb_y, first_neighb_x, second_neighb_y, second_neighb_x = get_neighbours_pixel_coord_on_edge(
@@ -81,7 +83,7 @@ def get_neighbours_pixel_coord_on_edge(current_grad_direction, x, y):
         second_neighb_x = x
         second_neighb_y = y + 1
     else:
-        print('[ERROR] get_neighbours_pixel_coord_on_edge current_grad_direction = {}'.format(current_grad_direction))
+        raise Exception('[ERROR] get_neighbours_pixel_coord_on_edge current_grad_direction = {}'.format(current_grad_direction))
 
     return first_neighb_y, first_neighb_x, second_neighb_y, second_neighb_x
 
@@ -110,7 +112,7 @@ def get_neighbours_pixel_coord_edge_opposite(current_grad_direction, x, y):
         second_neighb_x = x + 1
         second_neighb_y = y
     else:
-        print('[ERROR] get_neighbours_pixel_coord_edge_opposite current_grad_direction = {}'.format(current_grad_direction))
+        raise Exception('[ERROR] get_neighbours_pixel_coord_edge_opposite current_grad_direction = {}'.format(current_grad_direction))
 
     return first_neighb_y, first_neighb_x, second_neighb_y, second_neighb_x
 
@@ -134,8 +136,8 @@ def is_same_grad_directions(direction1, direction2):
 
 
 def non_maximum_suppression(img, grad_magnitude, grad_direction):
-    for y in range(0, img.shape[0], 1):
-        for x in range(0, img.shape[1], 1):
+    for y in range(img.shape[0]):
+        for x in range(img.shape[1]):
             current_grad_magnitude = grad_magnitude[y][x]
             current_grad_direction = grad_direction[y][x]
 
@@ -170,11 +172,11 @@ if not os.path.exists(output_dir_path):
 img = cv2.imread(input_img_path, cv2.IMREAD_GRAYSCALE)
 print('img.shape = {}'.format(img.shape))
 
-opencv_canny = cv2.Canny(img, 100, 200)
-cv2.imwrite(os.path.join(output_dir_path, 'opencv_canny.jpg'), opencv_canny, JPEG_IMG_QUALITY)
-
 blurred_img = cv2.GaussianBlur(img, (5, 5), 1.4)
 cv2.imwrite(os.path.join(output_dir_path, 'gaussian_blur.jpg'), blurred_img, JPEG_IMG_QUALITY)
+
+opencv_canny = cv2.Canny(blurred_img, LOWER_THRESHOLD, UPPER_THRESHOLD)
+cv2.imwrite(os.path.join(output_dir_path, 'opencv_canny.jpg'), opencv_canny, JPEG_IMG_QUALITY)
 
 sobel_x = cv2.Sobel(blurred_img, cv2.CV_64F, 1, 0, ksize=3)
 sobel_y = cv2.Sobel(blurred_img, cv2.CV_64F, 0, 1, ksize=3)
