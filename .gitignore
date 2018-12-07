@@ -1,10 +1,11 @@
 # custom
 
-canny_edge_detector/input/*
 canny_edge_detector/output/*
 
-hough_transform/input/*
 hough_transform/output/*
+
+sift/input/*
+sift/output/*
 
 # Created by https://www.gitignore.io/api/linux,macos,python,pycharm,windows,visualstudiocode
 

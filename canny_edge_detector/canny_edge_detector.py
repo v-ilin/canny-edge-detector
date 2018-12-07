@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 
 INPUT_DIR = 'input'
-OUTPUT_DIR_NAME = 'output'
+OUTPUT_DIR = 'output'
 # IMG_NAME = 'lena.png'
 # IMG_NAME = 'capitol.png'
 # IMG_NAME = 'street_sign.jpg'
@@ -164,7 +164,7 @@ def non_maximum_suppression(img, grad_magnitude, grad_direction):
 
 
 input_img_path = os.path.join(INPUT_DIR, IMG_NAME)
-output_dir_path = os.path.join(OUTPUT_DIR_NAME, IMG_NAME)
+output_dir_path = os.path.join(OUTPUT_DIR, IMG_NAME)
 
 if not os.path.exists(output_dir_path):
     os.makedirs(output_dir_path)
