@@ -1,9 +1,6 @@
 # custom
-
 canny_edge_detector/output/*
-
 hough_transform/output/*
-
 sift/input/*
 sift/output/*
 

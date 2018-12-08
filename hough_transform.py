@@ -3,8 +3,10 @@ import math
 import numpy as np
 import cv2
 
-INPUT_DIR = 'input'
-OUTPUT_DIR = 'output'
+from common import utils
+
+INPUT_DIR = 'hough_transform' + os.sep + 'input'
+OUTPUT_DIR = 'hough_transform' + os.sep + 'output'
 # IMG_NAME = 'lena.jpg'
 # IMG_NAME = 'capitol.jpg'
 # IMG_NAME = 'street_signs.jpg'
@@ -14,8 +16,6 @@ UPPER_THRESHOLD_LINES = 124
 # UPPER_THRESHOLD_LINES = 150
 UPPER_THRESHOLD_CIRCLES = 20
 JPEG_IMG_QUALITY = [int(cv2.IMWRITE_JPEG_QUALITY), 100]
-input_img_path = os.path.join(INPUT_DIR, IMG_NAME)
-output_dir_path = os.path.join(OUTPUT_DIR, IMG_NAME)
 
 
 def calculate_hough_lines_accumulator(img, diagonal_length):
@@ -102,20 +102,6 @@ def draw_circles(img, circles_params):
     return img
 
 
-def save_results(img, filename):
-    output_img_path = os.path.join(output_dir_path, filename)
-
-    if not os.path.exists(output_dir_path):
-        os.makedirs(output_dir_path)
-
-    success = cv2.imwrite(output_img_path, img, JPEG_IMG_QUALITY)
-
-    if success:
-        return output_img_path
-    else:
-        raise Exception('[ERROR] A result image was not saved!')
-
-
 def hough_lines_transform(img):
     diagonal_length = int(math.sqrt(img.shape[0] * img.shape[0] + img.shape[1] * img.shape[1]))
 
@@ -127,7 +113,7 @@ def hough_lines_transform(img):
 
     img_with_lines = draw_lines(img, lines_params, diagonal_length)
 
-    saved_image_path = save_results(img_with_lines, 'hough_lines.jpg')
+    saved_image_path = utils.save_image(OUTPUT_DIR, img_with_lines, 'hough_lines.jpg')
 
     return saved_image_path
 
@@ -141,17 +127,22 @@ def hough_circles_transform(img):
 
     img_with_circles = draw_circles(img, circles_params)
 
-    saved_image_path = save_results(img_with_circles, 'hough_circles.jpg')
+    saved_image_path = utils.save_image(OUTPUT_DIR, img_with_circles, 'hough_circles.jpg')
 
     return saved_image_path
 
 
-# main program starts here
-img = cv2.imread(input_img_path, cv2.IMREAD_GRAYSCALE)
-print('img.shape = {}'.format(img.shape))
+def main():
+    input_img_path = os.path.join(INPUT_DIR, IMG_NAME)
+    img = cv2.imread(input_img_path, cv2.IMREAD_GRAYSCALE)
+    print('img.shape = {}'.format(img.shape))
 
-# saved_image_with_lines = hough_lines_transform(img)
-saved_image_with_circles = hough_circles_transform(img)
+    saved_image_with_lines = hough_lines_transform(img)
+    saved_image_with_circles = hough_circles_transform(img)
 
-# print('A result saved to: {}'.format(saved_image_with_lines))
-print('A result saved to: {}'.format(saved_image_with_circles))
+    print('A result saved to: {}'.format(saved_image_with_lines))
+    print('A result saved to: {}'.format(saved_image_with_circles))
+
+
+if __name__ == '__main__':
+    main()
