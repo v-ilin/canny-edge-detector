@@ -2,7 +2,7 @@ import os
 import cv2
 import numpy as np
 from skimage.util import random_noise
-# from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt
 
 from common import utils
 
@@ -10,8 +10,8 @@ IMG_NAME = 'penguins.jpg'
 INPUT_DIR = 'sift' + os.sep + 'input'
 OUTPUT_DIR = 'sift' + os.sep + 'output'
 TEMP_FOLDER = OUTPUT_DIR + os.sep + IMG_NAME + os.sep + 'temp'
-TRANSFORMATION_TYPE = 'scale'
-FEATURES_EXTRACT_TYPE = 'ORB'
+TRANSFORMATION_TYPE = 'quality'
+FEATURES_EXTRACT_TYPE = 'Harris'
 N_KEYPOINTS = 100
 VARIANCE_VALUES = [0.05, 0.1, 0.2, 0.4, 1]
 SCALE_VALUES = [0.5, 0.25, 0.125, 0.0625]
@@ -131,20 +131,22 @@ def main():
     origin_img_with_kps = cv2.drawKeypoints(img_origin, kps_origin, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
     utils.save_image(output_img_dir, origin_img_with_kps, 'sift_keypoints.jpg')
 
-    for transformed_img, transform_feature in produce_transformed_image(img_origin, TRANSFORMATION_TYPE):
+    matches_counts = []
+    transform_feature_values = []
+
+    for transformed_img, transform_feature_value in produce_transformed_image(img_origin, TRANSFORMATION_TYPE):
         kps, descriptors = extract_features(transformed_img, N_KEYPOINTS, FEATURES_EXTRACT_TYPE)
         transformed_img_with_kps = cv2.drawKeypoints(transformed_img, kps, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
-        filename = '{}={}.jpg'.format(TRANSFORMATION_TYPE, transform_feature)
+        filename = '{}={}.jpg'.format(TRANSFORMATION_TYPE, transform_feature_value)
         utils.save_image(output_img_dir, transformed_img_with_kps, filename)
 
         bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
 
         matches = bf.match(descriptors_origin, descriptors)
-
         matches = sorted(matches, key=lambda x: x.distance)
 
-        matches_filename = 'matches_{}={}.jpg'.format(TRANSFORMATION_TYPE, transform_feature)
+        matches_filename = 'matches_{}={}.jpg'.format(TRANSFORMATION_TYPE, transform_feature_value)
 
         if TRANSFORMATION_TYPE == 'scale':
             img_to_compare = transformed_img
@@ -154,6 +156,9 @@ def main():
         img_matches = cv2.drawMatches(img_origin, kps_origin, img_to_compare, kps, matches, None, flags=2)
         utils.save_image(output_img_dir, img_matches, matches_filename)
 
+        matches_count = len(matches)
+        matches_counts.append(matches_count)
+        transform_feature_values.append(transform_feature_value)
         # blank_img = np.zeros(noisy_img.shape, dtype=np.uint8)
         # test = cv2.drawKeypoints(blank_img, kps, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
         # test2 = cv2.drawKeypoints(blank_img, noisy_kps, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
@@ -161,7 +166,16 @@ def main():
         # utils.save_image(output_img_dir, test2, 'test2.jpg', 100)
         # break
 
-        print('{} = {}. Matches = {}'.format(TRANSFORMATION_TYPE, transform_feature, len(matches)))
+        print('{} = {}. Matches = {}'.format(TRANSFORMATION_TYPE, transform_feature_value, matches_count))
+
+    plt.title('Dependency between {} and number of matching features'.format(TRANSFORMATION_TYPE))
+    plt.xlabel('Number of matching features')
+    plt.ylabel('Transformation feature value')
+    plt.plot(matches_counts, transform_feature_values)
+
+    chart_filename = 'chart_{}.png'.format(TRANSFORMATION_TYPE)
+    chart_filepath = os.path.join(output_img_dir, chart_filename)
+    plt.savefig(chart_filepath)
 
 
 if __name__ == '__main__':
