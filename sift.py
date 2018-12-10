@@ -70,7 +70,6 @@ def extract_features(img, vector_size, mode):
         kps = sort_keypoints(kps, vector_size)
         kps, descriptors = orb.compute(img, kps)
 
-
     return kps, descriptors
 
 
@@ -129,7 +128,7 @@ def main():
     kps_origin, descriptors_origin = extract_features(img_origin, N_KEYPOINTS, FEATURES_EXTRACT_TYPE)
 
     origin_img_with_kps = cv2.drawKeypoints(img_origin, kps_origin, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-    utils.save_image(output_img_dir, origin_img_with_kps, 'sift_keypoints.jpg')
+    utils.save_image(output_img_dir, origin_img_with_kps, 'origin_keypoints.jpg')
 
     matches_counts = []
     transform_feature_values = []
