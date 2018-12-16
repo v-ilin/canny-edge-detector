@@ -1,6 +1,8 @@
 import os
 import cv2
 import numpy as np
+import pandas as pd
+
 from skimage.util import random_noise
 from matplotlib import pyplot as plt
 
@@ -10,10 +12,10 @@ IMG_NAME = 'penguins.jpg'
 INPUT_DIR = 'sift' + os.sep + 'input'
 OUTPUT_DIR = 'sift' + os.sep + 'output'
 TEMP_FOLDER = OUTPUT_DIR + os.sep + IMG_NAME + os.sep + 'temp'
-TRANSFORMATION_TYPE = 'quality'
-FEATURES_EXTRACT_TYPE = 'Harris'
+TRANSFORMATION_TYPE = 'noise'
+EXTRACT_FEATURES_MODES = ['SIFT', 'Harris', 'SURF', 'BRIEF', 'ORB']
 N_KEYPOINTS = 100
-VARIANCE_VALUES = [0.05, 0.1, 0.2, 0.4, 1]
+VARIANCE_VALUES = [5, 10, 20, 40, 100]
 SCALE_VALUES = [0.5, 0.25, 0.125, 0.0625]
 ROTATE_VALUES = range(0, 370, 10)
 QUALITY_VALUES = range(5, 105, 5)
@@ -119,26 +121,25 @@ def produce_transformed_image(img, mode):
             yield img, quality
 
 
-def main():
-    input_img_path = os.path.join(INPUT_DIR, IMG_NAME)
-    output_img_dir = os.path.join(OUTPUT_DIR, IMG_NAME, FEATURES_EXTRACT_TYPE)
-
+def count_matches_features(input_img_path, output_img_dir, mode):
     img_origin = cv2.imread(input_img_path, cv2.IMREAD_GRAYSCALE)
 
-    kps_origin, descriptors_origin = extract_features(img_origin, N_KEYPOINTS, FEATURES_EXTRACT_TYPE)
+    kps_origin, descriptors_origin = extract_features(img_origin, N_KEYPOINTS, mode)
 
-    origin_img_with_kps = cv2.drawKeypoints(img_origin, kps_origin, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-    utils.save_image(output_img_dir, origin_img_with_kps, 'origin_keypoints.jpg')
+    origin_img_with_kps = cv2.drawKeypoints(img_origin, kps_origin, None,
+                                            flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+    # utils.save_image(output_img_dir, origin_img_with_kps, 'origin_keypoints.jpg')
 
     matches_counts = []
     transform_feature_values = []
 
     for transformed_img, transform_feature_value in produce_transformed_image(img_origin, TRANSFORMATION_TYPE):
-        kps, descriptors = extract_features(transformed_img, N_KEYPOINTS, FEATURES_EXTRACT_TYPE)
-        transformed_img_with_kps = cv2.drawKeypoints(transformed_img, kps, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        kps, descriptors = extract_features(transformed_img, N_KEYPOINTS, mode)
+        transformed_img_with_kps = cv2.drawKeypoints(transformed_img, kps, None,
+                                                     flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
         filename = '{}={}.jpg'.format(TRANSFORMATION_TYPE, transform_feature_value)
-        utils.save_image(output_img_dir, transformed_img_with_kps, filename)
+        # utils.save_image(output_img_dir, transformed_img_with_kps, filename)
 
         bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
 
@@ -158,23 +159,35 @@ def main():
         matches_count = len(matches)
         matches_counts.append(matches_count)
         transform_feature_values.append(transform_feature_value)
-        # blank_img = np.zeros(noisy_img.shape, dtype=np.uint8)
-        # test = cv2.drawKeypoints(blank_img, kps, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-        # test2 = cv2.drawKeypoints(blank_img, noisy_kps, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-        # utils.save_image(output_img_dir, test, 'test.jpg', 100)
-        # utils.save_image(output_img_dir, test2, 'test2.jpg', 100)
-        # break
 
-        print('{} = {}. Matches = {}'.format(TRANSFORMATION_TYPE, transform_feature_value, matches_count))
+    # print('{} = {}. Matches = {}'.format(TRANSFORMATION_TYPE, transform_feature_value, matches_count))
+    return matches_counts, transform_feature_values
 
-    plt.title('Dependency between {} and number of matching features'.format(TRANSFORMATION_TYPE))
-    plt.xlabel('Number of matching features')
-    plt.ylabel('Transformation feature value')
-    plt.plot(matches_counts, transform_feature_values)
+
+def main():
+    input_img_path = os.path.join(INPUT_DIR, IMG_NAME)
+    output_dir = os.path.join(OUTPUT_DIR, IMG_NAME)
+
+    chart_data = pd.DataFrame()
+
+    for features_extract_method in EXTRACT_FEATURES_MODES:
+        output_dir_method = os.path.join(output_dir, features_extract_method)
+        matches_counts, transform_feature_values = count_matches_features(input_img_path, output_dir_method, features_extract_method)
+
+        plt.title('Dependency between {} and number of matching features'.format(TRANSFORMATION_TYPE))
+        plt.xlabel('Transformation value')
+        plt.ylabel('Number of matching features')
+
+        line_data = pd.DataFrame({'x': transform_feature_values, features_extract_method: matches_counts})
+        chart_data = chart_data.append(line_data, sort=False)
+
+        plt.plot('x', features_extract_method, data=chart_data)
+
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
     chart_filename = 'chart_{}.png'.format(TRANSFORMATION_TYPE)
-    chart_filepath = os.path.join(output_img_dir, chart_filename)
-    plt.savefig(chart_filepath)
+    chart_filepath = os.path.join(output_dir, chart_filename)
+    plt.savefig(chart_filepath, bbox_inches='tight')
 
 
 if __name__ == '__main__':
