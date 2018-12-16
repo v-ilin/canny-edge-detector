@@ -10,11 +10,11 @@ OUTPUT_DIR = 'hough_transform' + os.sep + 'output'
 # IMG_NAME = 'lena.jpg'
 # IMG_NAME = 'capitol.jpg'
 # IMG_NAME = 'street_signs.jpg'
-IMG_NAME = 'opencv.jpg'
-UPPER_THRESHOLD_LINES = 124
+IMG_NAME = 'circles.jpg'
+UPPER_THRESHOLD_LINES = 80
 # UPPER_THRESHOLD_LINES = 200
 # UPPER_THRESHOLD_LINES = 150
-UPPER_THRESHOLD_CIRCLES = 20
+UPPER_THRESHOLD_CIRCLES = 12
 JPEG_IMG_QUALITY = [int(cv2.IMWRITE_JPEG_QUALITY), 100]
 
 
@@ -37,17 +37,18 @@ def calculate_circle_radius(x, y, x_center, y_center):
 
 
 def calculate_hough_circles_accumulator(img):
-    R_max = calculate_circle_radius(img.shape[1] - 1, img.shape[0] - 1, 0, 0)
+    R_max = 50
 
-    acc = np.zeros((img.shape[0], img.shape[1], R_max + 1), dtype=int)
+    acc = np.zeros((500, 500, R_max + 1), dtype=int)
 
     for y_index, y in enumerate(img):
         for x_index, x in enumerate(y):
             if x == 255:
-                for y_center in range(img.shape[0]):
-                    for x_center in range(img.shape[1]):
-                        R = calculate_circle_radius(x_index, y_index, x_center, y_center)
-                        acc[y_center][x_center][R] = acc[y_center][x_center][R] + 1
+                for r in range(R_max):
+                    for theta in range(0, 361, 30):
+                        a = int(x_index - r * math.cos(theta * math.pi / 180.0))
+                        b = int(y_index - r * math.sin(theta * math.pi / 180.0))
+                        acc[b][a][r] = acc[b][a][r] + 1
 
         print('y = {}/{}'.format(y_index, img.shape[0]))
 
@@ -113,7 +114,8 @@ def hough_lines_transform(img):
 
     img_with_lines = draw_lines(img, lines_params, diagonal_length)
 
-    saved_image_path = utils.save_image(OUTPUT_DIR, img_with_lines, 'hough_lines.jpg')
+    output_dir = os.path.join(OUTPUT_DIR, IMG_NAME)
+    saved_image_path = utils.save_image(output_dir, img_with_lines, 'hough_lines.jpg')
 
     return saved_image_path
 
@@ -127,7 +129,8 @@ def hough_circles_transform(img):
 
     img_with_circles = draw_circles(img, circles_params)
 
-    saved_image_path = utils.save_image(OUTPUT_DIR, img_with_circles, 'hough_circles.jpg')
+    output_dir = os.path.join(OUTPUT_DIR, IMG_NAME)
+    saved_image_path = utils.save_image(output_dir, img_with_circles, 'hough_circles.jpg')
 
     return saved_image_path
 
