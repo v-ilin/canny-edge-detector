@@ -9,12 +9,14 @@ from matplotlib import pyplot as plt
 from common import utils
 
 IMAGES = ['war.jpg', 'boat.jpg', 'house.jpg']
+# IMAGES = ['war.jpg']
 IMG_NAME = 'penguins.jpg'
 INPUT_DIR = 'sift' + os.sep + 'input'
 OUTPUT_DIR = 'sift' + os.sep + 'output'
 TEMP_FOLDER = OUTPUT_DIR + os.sep + IMG_NAME + os.sep + 'temp'
-TRANSFORMATION_TYPE = 'quality'
+TRANSFORMATION_TYPE = 'noise'
 EXTRACT_FEATURES_MODES = ['BRIEF', 'SIFT', 'Harris', 'SURF', 'ORB']
+# EXTRACT_FEATURES_MODES = ['SURF']
 N_KEYPOINTS = 100
 VARIANCE_VALUES = [5, 10, 20, 40, 100]
 SCALE_VALUES = [0.5, 0.25, 0.125, 0.0625]
@@ -84,7 +86,7 @@ def produce_transformed_image(img, mode):
 
     if mode == 'noise':
         for variance in VARIANCE_VALUES:
-            noisy_img = add_noise(img, variance)
+            noisy_img = add_noise(img, variance / 255.0)
             yield noisy_img, variance
 
     elif mode == 'scale':
@@ -122,6 +124,29 @@ def produce_transformed_image(img, mode):
             yield img, quality
 
 
+def filter_matches(matches, query_kps, train_kps, transformation_mode):
+    result_matches = []
+
+    if transformation_mode == 'quality' or transformation_mode == 'noise':
+        for match in matches:
+            diff_x = abs(query_kps[match.queryIdx].pt[0] - train_kps[match.trainIdx].pt[0])
+            diff_y = abs(query_kps[match.queryIdx].pt[1] - train_kps[match.trainIdx].pt[1])
+
+            if diff_x < 10 and diff_y < 10:
+                result_matches.append(match)
+
+    elif transformation_mode == 'rotate':
+        return result_matches # TODO
+
+    elif transformation_mode == 'scale':
+        return result_matches # TODO
+
+    else:
+        raise ValueError()
+
+    return result_matches
+
+
 def count_matches_features(input_img_path, output_img_dir, mode):
     img_origin = cv2.imread(input_img_path, cv2.IMREAD_GRAYSCALE)
 
@@ -146,13 +171,15 @@ def count_matches_features(input_img_path, output_img_dir, mode):
 
         if descriptors is not None:
             if descriptors_origin.shape[0] < descriptors.shape[0]:
-                matches = bf.match(descriptors_origin, descriptors[:-(len(descriptors_origin) - 1)])
+                descriptors_origin = descriptors_origin.reshape(descriptors.shape)
             elif descriptors_origin.shape[0] > descriptors.shape[0]:
-                matches = bf.match(descriptors_origin[:-(len(descriptors) - 1)], descriptors)
-            else:
-                matches = bf.match(descriptors_origin, descriptors)
+                descriptors = descriptors.reshape(descriptors_origin.shape)
 
-            matches = sorted(matches, key=lambda x: x.distance)
+            matches = bf.match(descriptors_origin, descriptors)
+
+            print('Matches = {}'.format(len(matches)))
+            matches = filter_matches(matches, kps_origin, kps, TRANSFORMATION_TYPE)
+            print('Filtered matches = {}'.format(len(matches)))
 
             matches_filename = 'matches_{}={}.jpg'.format(TRANSFORMATION_TYPE, transform_feature_value)
 
