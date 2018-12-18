@@ -2,6 +2,7 @@ import os
 import cv2
 import numpy as np
 import pandas as pd
+import math
 
 import matplotlib
 matplotlib.use('agg')
@@ -18,7 +19,7 @@ IMG_NAME = 'penguins.jpg'
 INPUT_DIR = 'sift' + os.sep + 'input'
 OUTPUT_DIR = 'sift' + os.sep + 'output'
 TEMP_FOLDER = OUTPUT_DIR + os.sep + IMG_NAME + os.sep + 'temp'
-TRANSFORMATION_TYPE = 'noise'
+TRANSFORMATION_TYPE = 'rotate'
 EXTRACT_FEATURES_MODES = ['BRIEF', 'SIFT', 'Harris', 'SURF', 'ORB']
 # EXTRACT_FEATURES_MODES = ['SURF']
 N_KEYPOINTS = 100
@@ -26,6 +27,7 @@ VARIANCE_VALUES = [5, 10, 20, 40, 100]
 SCALE_VALUES = [0.5, 0.25, 0.125, 0.0625]
 ROTATE_VALUES = range(0, 370, 10)
 QUALITY_VALUES = range(5, 105, 5)
+FILTER_POINTS_THRESHOLD = 10
 JPEG_IMG_QUALITY = [int(cv2.IMWRITE_JPEG_QUALITY), 100]
 
 
@@ -128,7 +130,35 @@ def produce_transformed_image(img, mode):
             yield img, quality
 
 
-def filter_matches(matches, query_kps, train_kps, transformation_mode):
+def get_img_center_point(img_shape):
+    return (img_shape[1] // 2, img_shape[0] // 2)
+
+
+def filter_matches_rotate(matches, query_kps, train_kps, angle, rotation_point):
+    result_matches = []
+
+    angle = math.radians(angle)
+
+    for match in matches:
+        x = query_kps[match.queryIdx].pt[0] - rotation_point[0]
+        y = query_kps[match.queryIdx].pt[1] - rotation_point[1]
+
+        x_rotated = x * math.cos(angle) + y * math.sin(angle)
+        y_rotated = y * math.cos(angle) - x * math.sin(angle)
+
+        x_rotated = x_rotated + rotation_point[0]
+        y_rotated = y_rotated + rotation_point[1]
+
+        diff_x = abs(x_rotated - train_kps[match.trainIdx].pt[0])
+        diff_y = abs(y_rotated - train_kps[match.trainIdx].pt[1])
+
+        if diff_x < FILTER_POINTS_THRESHOLD and diff_y < FILTER_POINTS_THRESHOLD:
+            result_matches.append(match)
+
+    return result_matches
+
+
+def filter_matches(matches, query_kps, train_kps, transformation_mode, angle, img_shape):
     result_matches = []
 
     if transformation_mode == 'quality' or transformation_mode == 'noise':
@@ -136,10 +166,14 @@ def filter_matches(matches, query_kps, train_kps, transformation_mode):
             diff_x = abs(query_kps[match.queryIdx].pt[0] - train_kps[match.trainIdx].pt[0])
             diff_y = abs(query_kps[match.queryIdx].pt[1] - train_kps[match.trainIdx].pt[1])
 
-            if diff_x < 10 and diff_y < 10:
+            if diff_x < FILTER_POINTS_THRESHOLD and diff_y < FILTER_POINTS_THRESHOLD:
                 result_matches.append(match)
 
     elif transformation_mode == 'rotate':
+        center_point = get_img_center_point(img_shape)
+        r = filter_matches_rotate(matches, query_kps, train_kps, angle, center_point)
+        result_matches.extend(r)
+
         return result_matches # TODO
 
     elif transformation_mode == 'scale':
@@ -167,11 +201,11 @@ def count_matches_features(input_img_path, output_img_dir, mode):
 
     for transformed_img, transform_feature_value in produce_transformed_image(img_origin, TRANSFORMATION_TYPE):
         kps, descriptors = extract_features(transformed_img, N_KEYPOINTS, mode)
-        # transformed_img_with_kps = cv2.drawKeypoints(transformed_img, kps, None,
-        #                                              flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        transformed_img_with_kps = cv2.drawKeypoints(transformed_img, kps, None,
+                                                     flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
-        # filename = '{}={}.jpg'.format(TRANSFORMATION_TYPE, transform_feature_value)
-        # utils.save_image(output_img_dir, transformed_img_with_kps, filename)
+        filename = '{}={}.jpg'.format(TRANSFORMATION_TYPE, transform_feature_value)
+        utils.save_image(output_img_dir, transformed_img_with_kps, filename)
 
         if descriptors is not None:
             if descriptors_origin.shape[0] < descriptors.shape[0]:
@@ -181,8 +215,8 @@ def count_matches_features(input_img_path, output_img_dir, mode):
 
             matches = bf.match(descriptors_origin, descriptors)
 
-            print('Matches = {}'.format(len(matches)))
-            matches = filter_matches(matches, kps_origin, kps, TRANSFORMATION_TYPE)
+            print('{}. {} = {}. Matches = {}'.format(input_img_path, TRANSFORMATION_TYPE, transform_feature_value, len(matches)))
+            matches = filter_matches(matches, kps_origin, kps, TRANSFORMATION_TYPE, transform_feature_value, img_origin.shape)
             print('Filtered matches = {}'.format(len(matches)))
 
             matches_filename = 'matches_{}={}.jpg'.format(TRANSFORMATION_TYPE, transform_feature_value)
