@@ -3,8 +3,12 @@ import cv2
 import numpy as np
 import pandas as pd
 
+import matplotlib
+matplotlib.use('agg')
+import matplotlib.pyplot as plt
+
 from skimage.util import random_noise
-from matplotlib import pyplot as plt
+
 
 from common import utils
 
