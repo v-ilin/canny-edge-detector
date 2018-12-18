@@ -19,12 +19,12 @@ IMG_NAME = 'penguins.jpg'
 INPUT_DIR = 'sift' + os.sep + 'input'
 OUTPUT_DIR = 'sift' + os.sep + 'output'
 TEMP_FOLDER = OUTPUT_DIR + os.sep + IMG_NAME + os.sep + 'temp'
-TRANSFORMATION_TYPE = 'rotate'
 EXTRACT_FEATURES_MODES = ['BRIEF', 'SIFT', 'Harris', 'SURF', 'ORB']
+TRANSFORMATION_TYPE = 'scale'
 # EXTRACT_FEATURES_MODES = ['SURF']
 N_KEYPOINTS = 100
 VARIANCE_VALUES = [5, 10, 20, 40, 100]
-SCALE_VALUES = [0.5, 0.25, 0.125, 0.0625]
+SCALE_VALUES = [1, 0.5, 0.25, 0.125, 0.0625]
 ROTATE_VALUES = range(0, 370, 10)
 QUALITY_VALUES = range(5, 105, 5)
 FILTER_POINTS_THRESHOLD = 10
@@ -158,13 +158,16 @@ def filter_matches_rotate(matches, query_kps, train_kps, angle, rotation_point):
     return result_matches
 
 
-def filter_matches(matches, query_kps, train_kps, transformation_mode, angle, img_shape):
+def filter_matches(matches, query_kps, train_kps, transformation_mode, angle = 0, img_shape = None, scale = 1):
     result_matches = []
 
     if transformation_mode == 'quality' or transformation_mode == 'noise':
         for match in matches:
-            diff_x = abs(query_kps[match.queryIdx].pt[0] - train_kps[match.trainIdx].pt[0])
-            diff_y = abs(query_kps[match.queryIdx].pt[1] - train_kps[match.trainIdx].pt[1])
+            x = query_kps[match.queryIdx].pt[0]
+            y = query_kps[match.queryIdx].pt[1]
+
+            diff_x = abs(x - train_kps[match.trainIdx].pt[0])
+            diff_y = abs(y - train_kps[match.trainIdx].pt[1])
 
             if diff_x < FILTER_POINTS_THRESHOLD and diff_y < FILTER_POINTS_THRESHOLD:
                 result_matches.append(match)
@@ -174,10 +177,19 @@ def filter_matches(matches, query_kps, train_kps, transformation_mode, angle, im
         r = filter_matches_rotate(matches, query_kps, train_kps, angle, center_point)
         result_matches.extend(r)
 
-        return result_matches # TODO
+        return result_matches
 
     elif transformation_mode == 'scale':
-        return result_matches # TODO
+        for match in matches:
+            x = query_kps[match.queryIdx].pt[0] * scale
+            y = query_kps[match.queryIdx].pt[1] * scale
+
+            diff_x = abs(x - train_kps[match.trainIdx].pt[0])
+            diff_y = abs(y - train_kps[match.trainIdx].pt[1])
+
+            if diff_x < FILTER_POINTS_THRESHOLD and diff_y < FILTER_POINTS_THRESHOLD:
+                result_matches.append(match)
+        return result_matches
 
     else:
         raise ValueError()
@@ -209,14 +221,14 @@ def count_matches_features(input_img_path, output_img_dir, mode):
 
         if descriptors is not None:
             if descriptors_origin.shape[0] < descriptors.shape[0]:
-                descriptors_origin = descriptors_origin.reshape(descriptors.shape)
+                np.append(descriptors_origin, np.zeros((descriptors.shape[0] - descriptors_origin.shape[0], descriptors_origin.shape[1])), axis=0)
             elif descriptors_origin.shape[0] > descriptors.shape[0]:
-                descriptors = descriptors.reshape(descriptors_origin.shape)
+                np.append(descriptors, np.zeros((descriptors_origin.shape[0] - descriptors.shape[0], descriptors_origin.shape[1])), axis=0)
 
             matches = bf.match(descriptors_origin, descriptors)
 
             print('{}. {} = {}. Matches = {}'.format(input_img_path, TRANSFORMATION_TYPE, transform_feature_value, len(matches)))
-            matches = filter_matches(matches, kps_origin, kps, TRANSFORMATION_TYPE, transform_feature_value, img_origin.shape)
+            matches = filter_matches(matches, kps_origin, kps, TRANSFORMATION_TYPE, transform_feature_value, img_origin.shape, transform_feature_value)
             print('Filtered matches = {}'.format(len(matches)))
 
             matches_filename = 'matches_{}={}.jpg'.format(TRANSFORMATION_TYPE, transform_feature_value)
