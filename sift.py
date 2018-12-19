@@ -13,18 +13,18 @@ from skimage.util import random_noise
 
 from common import utils
 
-IMAGES = ['war.jpg', 'boat.jpg', 'house.jpg']
+IMAGES = ['war.jpg', 'house.jpg', 'boat.jpg']
 # IMAGES = ['war.jpg']
 IMG_NAME = 'penguins.jpg'
 INPUT_DIR = 'sift' + os.sep + 'input'
 OUTPUT_DIR = 'sift' + os.sep + 'output'
 TEMP_FOLDER = OUTPUT_DIR + os.sep + IMG_NAME + os.sep + 'temp'
-EXTRACT_FEATURES_MODES = ['BRIEF', 'SIFT', 'Harris', 'SURF', 'ORB']
+EXTRACT_FEATURES_MODES = ['SIFT', 'BRIEF', 'Harris', 'SURF', 'ORB']
 TRANSFORMATION_TYPE = 'scale'
 # EXTRACT_FEATURES_MODES = ['SURF']
 N_KEYPOINTS = 100
 VARIANCE_VALUES = [5, 10, 20, 40, 100]
-SCALE_VALUES = [1, 0.5, 0.25, 0.125, 0.0625]
+SCALE_VALUES = [0.5, 0.25, 0.125, 0.0625]
 ROTATE_VALUES = range(0, 370, 10)
 QUALITY_VALUES = range(5, 105, 5)
 FILTER_POINTS_THRESHOLD = 10
@@ -174,10 +174,9 @@ def filter_matches(matches, query_kps, train_kps, transformation_mode, angle = 0
 
     elif transformation_mode == 'rotate':
         center_point = get_img_center_point(img_shape)
-        r = filter_matches_rotate(matches, query_kps, train_kps, angle, center_point)
-        result_matches.extend(r)
+        result = filter_matches_rotate(matches, query_kps, train_kps, angle, center_point)
 
-        return result_matches
+        return result
 
     elif transformation_mode == 'scale':
         for match in matches:
