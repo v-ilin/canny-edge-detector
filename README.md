@@ -3,6 +3,10 @@ The process of edge detection consists of following steps:
 1. Non-maximum suppression
 2. Thresholding with Hysterysis
 
+Requirements:
+1. Python (2.7 or 3)
+2. OpenCV
+
 ## Non-maximum suppression
 
 1. Calculating first derivatives by x and y
